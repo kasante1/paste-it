@@ -7,11 +7,13 @@ import (
 	"net/http"
 	"os"
 	_ "github.com/go-sql-driver/mysql" 
+	"github.com/kasante1/paste_it_backend/internal/models"
 )
 
 type application struct {
 	errorLog *log.Logger
 	infoLog	 *log.Logger
+	snippets *models.SnippetModel
 
 }
 
@@ -48,8 +50,8 @@ func main() {
 
 	app := &application{
 		errorLog: errorLog,
-		infoLog:
-		infoLog,
+		infoLog: infoLog,
+		snippets: &models.SnippetModel{DB: db},
 	}
 
 	srv := &http.Server{
