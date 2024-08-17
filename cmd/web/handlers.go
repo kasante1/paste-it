@@ -5,15 +5,18 @@ import (
 "fmt"
 "net/http"
 "strconv"
-// "html/template" 
-// "log"
-"strings"
-"unicode/utf8" 
 "errors"
 "github.com/kasante1/paste_it_backend/internal/models"
 "github.com/julienschmidt/httprouter" 
+"github.com/kasante1/paste_it_backend/internal/validator"
 )
 
+type snippetCreateForm struct {
+	Title string
+	Content string
+	Expires int
+	validator.Validator
+}
 
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
 	
@@ -75,7 +78,6 @@ func (app *application) snippetView(w http.ResponseWriter, r *http.Request)  {
 }
 
 func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request){
-	fieldErrors := make(map[string]string)
 
 	err := r.ParseForm()
 
@@ -93,28 +95,19 @@ func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Check that the title value is not blank and is not more than 100
-	// characters long. If it fails either of those checks, add a message to the
-	// errors map using the field name as the key.
-	if strings.TrimSpace(title) == "" {
-	fieldErrors["title"] = "This field cannot be blank"
-	} else if utf8.RuneCountInString(title) > 100 {
-	fieldErrors["title"] = "This field cannot be more than 100 characters long"
+	form := snippetCreateForm{
+		Title: r.PostForm.Get("title"),
+		Content: r.PostForm.Get("content"),
+		Expires: expires,
 	}
-	// Check that the Content value isn't blank.
-	if strings.TrimSpace(content) == "" {
-	fieldErrors["content"] = "This field cannot be blank"
-	}
-	// Check the expires value matches one of the permitted values (1, 7 or
-	// 365).
-	if expires != 1 && expires != 7 && expires != 365 {
-	fieldErrors["expires"] = "This field must equal 1, 7 or 365"
-	}
-	// If there are any errors, dump them in a plain text HTTP response and
-	// return from the handler.
-	if len(fieldErrors) > 0 {
-	fmt.Fprint(w, fieldErrors)
-	return
+
+	form.CheckField(validator.NotBlank(form.Title), "title", "This field cannot be blank")
+	form.CheckField(validator.MaxChars(form.Title, 100), "title", "This field cannot be 100 characters long")
+	form.CheckField(validator.NotBlank(form.Content), "content", "This field cannot be blank")
+	form.CheckField(validator.PermittedInt(form.Expires, 1, 7, 365), "expires", "This field must equal 1 or 7 or 365")
+
+	if !form.Valid(){
+		return
 	}
 	id, err := app.snippets.Insert(title, content, expires)
 	if err != nil {
@@ -123,12 +116,7 @@ func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request
 	}
 
 	http.Redirect(w, r, fmt.Sprintf("/snippet/view/%d", id), http.StatusSeeOther)
-	if r.Method != http.MethodPost {
-		w.Header().Set("Allow", http.MethodPost)
-		app.clientError(w, http.StatusMethodNotAllowed)
-		return
-	
-	}
+
 
 }
 
