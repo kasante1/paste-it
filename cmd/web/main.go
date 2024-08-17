@@ -8,12 +8,14 @@ import (
 	"os"
 	_ "github.com/go-sql-driver/mysql" 
 	"github.com/kasante1/paste_it_backend/internal/models"
+	"github.com/go-playground/form/v4"
 )
 
 type application struct {
 	errorLog *log.Logger
 	infoLog	 *log.Logger
 	snippets *models.SnippetModel
+	formDecoder *form.Decoder
 
 }
 
@@ -48,10 +50,13 @@ func main() {
 
 	defer db.Close()
 
+	formDecoder := form.NewDecoder()
+
 	app := &application{
 		errorLog: errorLog,
 		infoLog: infoLog,
 		snippets: &models.SnippetModel{DB: db},
+		formDecoder: formDecoder,
 	}
 
 	srv := &http.Server{
