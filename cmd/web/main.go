@@ -9,6 +9,10 @@ import (
 	_ "github.com/go-sql-driver/mysql" 
 	"github.com/kasante1/paste_it_backend/internal/models"
 	"github.com/go-playground/form/v4"
+	"time"
+	"github.com/alexedwards/scs/mysqlstore" // New import
+	"github.com/alexedwards/scs/v2"
+ 
 )
 
 type application struct {
@@ -16,6 +20,7 @@ type application struct {
 	infoLog	 *log.Logger
 	snippets *models.SnippetModel
 	formDecoder *form.Decoder
+	sessionManager *scs.SessionManager
 
 }
 
@@ -52,11 +57,16 @@ func main() {
 
 	formDecoder := form.NewDecoder()
 
+	sessionManager := scs.New()
+	sessionManager.Store = mysqlstore.New(db)
+	sessionManager.Lifetime = 12 * time.Hour
+
 	app := &application{
 		errorLog: errorLog,
 		infoLog: infoLog,
 		snippets: &models.SnippetModel{DB: db},
 		formDecoder: formDecoder,
+		sessionManager: sessionManager,
 	}
 
 	srv := &http.Server{
